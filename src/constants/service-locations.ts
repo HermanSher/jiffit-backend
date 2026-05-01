@@ -1,0 +1,32 @@
+export const serviceLocations = [
+  {
+    sCode: "PATNA",
+    sName: "Patna",
+    state: "Bihar",
+    country: "India",
+    latitude: 25.5941,
+    longitude: 85.1376,
+    radiusKm: 30,
+    isActive: true,
+  },
+  {
+    sCode: "RANCHI",
+    sName: "Ranchi",
+    state: "Jharkhand",
+    country: "India",
+    latitude: 23.3441,
+    longitude: 85.3096,
+    radiusKm: 30,
+    isActive: true,
+  },
+  {
+    sCode: "LUCKNOW",
+    sName: "Lucknow",
+    state: "Uttar Pradesh",
+    country: "India",
+    latitude: 26.8467,
+    longitude: 80.9462,
+    radiusKm: 35,
+    isActive: true,
+  },
+] as const;
