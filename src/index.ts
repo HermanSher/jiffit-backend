@@ -3,6 +3,12 @@ import cors from "cors";
 import dotenv from "dotenv";
 import swaggerUi from "swagger-ui-express";
 import swaggerSpec from "./docs/swagger";
+import { authenticate } from "./middlewares/auth.middleware";
+import { requireDashboardAccess } from "./middlewares/dashboard.middleware";
+import accessRouter from "./modules/access/access.routes";
+import assignmentRouter from "./modules/assignment/assignment.routes";
+import locationRouter from "./modules/location/location.routes";
+import workerRouter from "./modules/worker/worker.routes";
 import authRouter from "./routes/auth.routes";
 import roleRouter from "./routes/role.routes";
 import userTypeRouter from "./routes/user-type.routes";
@@ -51,11 +57,15 @@ app.get("/api-docs.json", (req, res) => {
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use("/api/auth", authRouter);
-app.use("/api/roles", roleRouter);
-app.use("/api/user-types", userTypeRouter);
-app.use("/api/users", userRouter);
 app.use("/api/service-locations", serviceLocationRouter);
-app.use("/api", architectureRouter);
+app.use("/api/roles", authenticate, requireDashboardAccess, roleRouter);
+app.use("/api/user-types", authenticate, requireDashboardAccess, userTypeRouter);
+app.use("/api/users", authenticate, requireDashboardAccess, userRouter);
+app.use("/api", authenticate, locationRouter);
+app.use("/api", authenticate, requireDashboardAccess, accessRouter);
+app.use("/api/assignment", authenticate, requireDashboardAccess, assignmentRouter);
+app.use("/api/worker", authenticate, workerRouter);
+app.use("/api", authenticate, requireDashboardAccess, architectureRouter);
 
 app.use((req, res) => {
   res.status(404).json({

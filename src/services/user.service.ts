@@ -1,7 +1,9 @@
 import { EmploymentStatus, Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { ApiError } from "../utils/api-error";
+import { hashPassword } from "../utils/password";
 import { parseOptionalString } from "../utils/request-parsers";
+import { canManageRole, isSuperUserRole, RoleScope } from "../utils/role-precedence";
 
 export type CreateUserInput = {
   username: string;
@@ -192,8 +194,10 @@ class UserService {
         employmentStatus: true,
         role: {
           select: {
+            iMasterId: true,
             sCode: true,
             sName: true,
+            precedence: true,
           },
         },
       },
@@ -203,17 +207,28 @@ class UserService {
       throw new ApiError(404, "Creator user not found for provided createdByUserId.");
     }
 
-    if (!this.isActiveSuUser(creator)) {
-      throw new ApiError(403, "Only active SU user can create new user credentials.");
+    if (!creator.isActive || creator.employmentStatus !== EmploymentStatus.ACTIVE || !creator.role) {
+      throw new ApiError(403, "Only active dashboard users can create new user credentials.");
     }
 
-    const role = await prisma.mRoles.findFirst({
+    const actorRole: RoleScope = {
+      iMasterId: creator.role.iMasterId,
+      sCode: creator.role.sCode,
+      sName: creator.role.sName,
+      precedence: creator.role.precedence,
+    };
+
+    const targetRole = await prisma.mRoles.findFirst({
       where: { iMasterId: input.iRoleMasterId, isDeleted: false },
-      select: { iMasterId: true },
+      select: { iMasterId: true, sCode: true, sName: true, precedence: true },
     });
 
-    if (!role) {
+    if (!targetRole) {
       throw new ApiError(404, "Role not found for provided iRoleMasterId.");
+    }
+
+    if (!isSuperUserRole(actorRole) && !canManageRole(actorRole, targetRole)) {
+      throw new ApiError(403, "You can only create users with lower privilege roles.");
     }
 
     const userType = await prisma.mUserTypes.findFirst({
@@ -226,6 +241,7 @@ class UserService {
     }
 
     const address = parseOptionalString(input.address);
+    const hashedPassword = await hashPassword(input.password);
     const user = await prisma.mUsers.create({
       data: {
         username: input.username,
@@ -235,7 +251,7 @@ class UserService {
         mobileNo: parseOptionalString(input.mobileNo),
         alternateNumber: parseOptionalString(input.alternateNumber),
         email: parseOptionalString(input.email),
-        password: input.password,
+        password: hashedPassword,
         iRoleMasterId: input.iRoleMasterId,
         iUserTypeMasterId: input.iUserTypeMasterId,
         employmentStatus: EmploymentStatus.ACTIVE,

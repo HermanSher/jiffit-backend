@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { permissionCodes } from "../constants/permission-codes";
 import { createCrudRouter } from "./crud-router";
 import bookingRouter from "./booking.routes";
 
@@ -25,6 +26,12 @@ architectureRouter.use(
       isActive: "boolean",
     },
     searchableFields: ["addressLine1", "city", "state", "pincode"],
+    permissions: {
+      view: permissionCodes.USERS_VIEW,
+      create: permissionCodes.USERS_CREATE,
+      update: permissionCodes.USERS_UPDATE,
+      delete: permissionCodes.USERS_DELETE,
+    },
   }),
 );
 
@@ -44,6 +51,12 @@ architectureRouter.use(
       isAvailable: "boolean",
     },
     searchableFields: ["heroCode", "governmentIdNumber", "skillSummary"],
+    permissions: {
+      view: permissionCodes.USERS_VIEW,
+      create: permissionCodes.USERS_CREATE,
+      update: permissionCodes.USERS_UPDATE,
+      delete: permissionCodes.USERS_DELETE,
+    },
   }),
 );
 
@@ -60,6 +73,12 @@ architectureRouter.use(
       totalRatings: "int",
     },
     searchableFields: ["customerCode"],
+    permissions: {
+      view: permissionCodes.USERS_VIEW,
+      create: permissionCodes.USERS_CREATE,
+      update: permissionCodes.USERS_UPDATE,
+      delete: permissionCodes.USERS_DELETE,
+    },
   }),
 );
 
@@ -76,6 +95,12 @@ architectureRouter.use(
       department: "string",
     },
     searchableFields: ["employeeCode", "designation", "department"],
+    permissions: {
+      view: permissionCodes.USERS_VIEW,
+      create: permissionCodes.USERS_CREATE,
+      update: permissionCodes.USERS_UPDATE,
+      delete: permissionCodes.USERS_DELETE,
+    },
   }),
 );
 
@@ -92,6 +117,12 @@ architectureRouter.use(
       displayOrder: "int",
       isActive: "boolean",
     },
+    permissions: {
+      view: permissionCodes.SERVICES_VIEW,
+      create: permissionCodes.SERVICES_CREATE,
+      update: permissionCodes.SERVICES_UPDATE,
+      delete: permissionCodes.SERVICES_DELETE,
+    },
   }),
 );
 
@@ -106,6 +137,12 @@ architectureRouter.use(
       sName: "string",
       description: "string",
       isActive: "boolean",
+    },
+    permissions: {
+      view: permissionCodes.SERVICES_VIEW,
+      create: permissionCodes.SERVICES_CREATE,
+      update: permissionCodes.SERVICES_UPDATE,
+      delete: permissionCodes.SERVICES_DELETE,
     },
   }),
 );
@@ -135,6 +172,12 @@ architectureRouter.use(
       requiresAfterImage: "boolean",
       isActive: "boolean",
     },
+    permissions: {
+      view: permissionCodes.SERVICES_VIEW,
+      create: permissionCodes.SERVICES_CREATE,
+      update: permissionCodes.SERVICES_UPDATE,
+      delete: permissionCodes.SERVICES_DELETE,
+    },
   }),
 );
 
@@ -153,6 +196,12 @@ architectureRouter.use(
       isActive: "boolean",
     },
     searchableFields: ["slotName"],
+    permissions: {
+      view: permissionCodes.SERVICES_VIEW,
+      create: permissionCodes.SERVICES_CREATE,
+      update: permissionCodes.SERVICES_UPDATE,
+      delete: permissionCodes.SERVICES_DELETE,
+    },
   }),
 );
 
@@ -170,6 +219,12 @@ architectureRouter.use(
       isActive: "boolean",
     },
     searchableFields: ["imageUrl", "imageType"],
+    permissions: {
+      view: permissionCodes.SERVICES_VIEW,
+      create: permissionCodes.SERVICES_CREATE,
+      update: permissionCodes.SERVICES_UPDATE,
+      delete: permissionCodes.SERVICES_DELETE,
+    },
   }),
 );
 
@@ -186,6 +241,12 @@ architectureRouter.use(
       durationDays: "int",
       discountPercent: "decimal",
       isActive: "boolean",
+    },
+    permissions: {
+      view: permissionCodes.SERVICES_VIEW,
+      create: permissionCodes.SERVICES_CREATE,
+      update: permissionCodes.SERVICES_UPDATE,
+      delete: permissionCodes.SERVICES_DELETE,
     },
   }),
 );
@@ -205,6 +266,12 @@ architectureRouter.use(
       isActive: "boolean",
     },
     searchableFields: ["status"],
+    permissions: {
+      view: permissionCodes.SERVICES_VIEW,
+      create: permissionCodes.SERVICES_CREATE,
+      update: permissionCodes.SERVICES_UPDATE,
+      delete: permissionCodes.SERVICES_DELETE,
+    },
   }),
 );
 
@@ -228,6 +295,12 @@ architectureRouter.use(
       perUserLimit: "int",
       isActive: "boolean",
     },
+    permissions: {
+      view: permissionCodes.SERVICES_VIEW,
+      create: permissionCodes.SERVICES_CREATE,
+      update: permissionCodes.SERVICES_UPDATE,
+      delete: permissionCodes.SERVICES_DELETE,
+    },
   }),
 );
 
@@ -243,6 +316,12 @@ architectureRouter.use(
       isActive: "boolean",
     },
     searchableFields: [],
+    permissions: {
+      view: permissionCodes.SERVICES_VIEW,
+      create: permissionCodes.SERVICES_CREATE,
+      update: permissionCodes.SERVICES_UPDATE,
+      delete: permissionCodes.SERVICES_DELETE,
+    },
   }),
 );
 
@@ -258,6 +337,12 @@ architectureRouter.use(
       isActive: "boolean",
     },
     searchableFields: [],
+    permissions: {
+      view: permissionCodes.SERVICES_VIEW,
+      create: permissionCodes.SERVICES_CREATE,
+      update: permissionCodes.SERVICES_UPDATE,
+      delete: permissionCodes.SERVICES_DELETE,
+    },
   }),
 );
 
@@ -278,6 +363,12 @@ architectureRouter.use(
       isActive: "boolean",
     },
     searchableFields: ["city", "state", "pincode"],
+    permissions: {
+      view: permissionCodes.SERVICES_VIEW,
+      create: permissionCodes.SERVICES_CREATE,
+      update: permissionCodes.SERVICES_UPDATE,
+      delete: permissionCodes.SERVICES_DELETE,
+    },
   }),
 );
 
@@ -300,6 +391,12 @@ architectureRouter.use(
       remarks: "string",
     },
     searchableFields: ["status", "remarks"],
+    permissions: {
+      view: permissionCodes.ASSIGNMENTS_VIEW,
+      create: permissionCodes.ASSIGNMENTS_CREATE,
+      update: permissionCodes.ASSIGNMENTS_UPDATE,
+      delete: permissionCodes.ASSIGNMENTS_DELETE,
+    },
   }),
 );
 
@@ -317,6 +414,12 @@ architectureRouter.use(
       remarks: "string",
     },
     searchableFields: ["imageType", "imageUrl", "remarks"],
+    permissions: {
+      view: permissionCodes.BOOKINGS_VIEW,
+      create: permissionCodes.BOOKINGS_CREATE,
+      update: permissionCodes.BOOKINGS_UPDATE,
+      delete: permissionCodes.BOOKINGS_DELETE,
+    },
   }),
 );
 
@@ -335,6 +438,12 @@ architectureRouter.use(
       review: "string",
     },
     searchableFields: ["ratingType", "review"],
+    permissions: {
+      view: permissionCodes.BOOKINGS_VIEW,
+      create: permissionCodes.BOOKINGS_CREATE,
+      update: permissionCodes.BOOKINGS_UPDATE,
+      delete: permissionCodes.BOOKINGS_DELETE,
+    },
   }),
 );
 
@@ -358,6 +467,12 @@ architectureRouter.use(
       paidAt: "date",
     },
     searchableFields: ["provider", "providerPaymentId", "providerOrderId", "status"],
+    permissions: {
+      view: permissionCodes.PAYMENTS_VIEW,
+      create: permissionCodes.PAYMENTS_CREATE,
+      update: permissionCodes.PAYMENTS_UPDATE,
+      delete: permissionCodes.PAYMENTS_DELETE,
+    },
   }),
 );
 
@@ -378,6 +493,12 @@ architectureRouter.use(
       errorMessage: "string",
     },
     searchableFields: ["provider", "eventType", "processingStatus", "errorMessage"],
+    permissions: {
+      view: permissionCodes.PAYMENTS_VIEW,
+      create: permissionCodes.PAYMENTS_CREATE,
+      update: permissionCodes.PAYMENTS_UPDATE,
+      delete: permissionCodes.PAYMENTS_DELETE,
+    },
   }),
 );
 

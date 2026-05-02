@@ -11,6 +11,25 @@ import {
   validateRequestBodyFields,
 } from "../utils/request-parsers";
 import { ApiError } from "../utils/api-error";
+import { isSuperUserRole } from "../utils/role-precedence";
+
+function assertActorCanManageRolePrecedence(actor: Request["authUser"], targetPrecedence: number) {
+  if (!actor) {
+    throw new ApiError(401, "Authentication required.");
+  }
+
+  if (isSuperUserRole({ sCode: actor.roleCode ?? "" })) {
+    return;
+  }
+
+  if (actor.rolePrecedence === null || actor.rolePrecedence === undefined) {
+    throw new ApiError(403, "Role precedence missing for current user.");
+  }
+
+  if (targetPrecedence <= actor.rolePrecedence) {
+    throw new ApiError(403, "You can only manage roles with lower privilege.");
+  }
+}
 
 export async function createRole(req: Request, res: Response) {
   try {
@@ -23,6 +42,7 @@ export async function createRole(req: Request, res: Response) {
     const sName = parseRequiredString(req.body.sName, "sName");
     const precedence = parseRequiredInt(req.body.precedence, "precedence");
     const isActive = parseOptionalBoolean(req.body.isActive, "isActive");
+    assertActorCanManageRolePrecedence(req.authUser, precedence);
 
     const role = await roleService.createRole({
       sCode,
@@ -109,6 +129,17 @@ export async function updateRoleById(req: Request, res: Response) {
     const precedence = parseOptionalInt(req.body.precedence, "precedence");
     const isActive = parseOptionalBoolean(req.body.isActive, "isActive");
 
+    if (precedence !== undefined) {
+      assertActorCanManageRolePrecedence(req.authUser, precedence);
+    }
+
+    const existingRole = await roleService.getRoleById(iMasterId, true);
+    if (!existingRole) {
+      throw new ApiError(404, "Role not found.");
+    }
+
+    assertActorCanManageRolePrecedence(req.authUser, existingRole.precedence);
+
     const role = await roleService.updateRoleById(iMasterId, {
       sCode,
       sName,
@@ -135,6 +166,17 @@ export async function updateRoleBySCode(req: Request, res: Response) {
     const precedence = parseOptionalInt(req.body.precedence, "precedence");
     const isActive = parseOptionalBoolean(req.body.isActive, "isActive");
 
+    if (precedence !== undefined) {
+      assertActorCanManageRolePrecedence(req.authUser, precedence);
+    }
+
+    const existingRole = await roleService.getRoleBySCode(existingSCode, true);
+    if (!existingRole) {
+      throw new ApiError(404, "Role not found.");
+    }
+
+    assertActorCanManageRolePrecedence(req.authUser, existingRole.precedence);
+
     const role = await roleService.updateRoleBySCode(existingSCode, {
       sCode,
       sName,
@@ -151,6 +193,12 @@ export async function updateRoleBySCode(req: Request, res: Response) {
 export async function deleteRoleById(req: Request, res: Response) {
   try {
     const iMasterId = parseRequiredInt(req.params.iMasterId ?? req.params.id, "iMasterId");
+    const existingRole = await roleService.getRoleById(iMasterId, true);
+    if (!existingRole) {
+      throw new ApiError(404, "Role not found.");
+    }
+
+    assertActorCanManageRolePrecedence(req.authUser, existingRole.precedence);
     const role = await roleService.deleteRoleById(iMasterId);
 
     sendSuccess(res, 200, "Role deleted successfully.", role);
@@ -162,6 +210,12 @@ export async function deleteRoleById(req: Request, res: Response) {
 export async function deleteRoleBySCode(req: Request, res: Response) {
   try {
     const sCode = parseRequiredString(req.params.sCode, "sCode");
+    const existingRole = await roleService.getRoleBySCode(sCode, true);
+    if (!existingRole) {
+      throw new ApiError(404, "Role not found.");
+    }
+
+    assertActorCanManageRolePrecedence(req.authUser, existingRole.precedence);
     const role = await roleService.deleteRoleBySCode(sCode);
 
     sendSuccess(res, 200, "Role deleted successfully.", role);
@@ -173,6 +227,13 @@ export async function deleteRoleBySCode(req: Request, res: Response) {
 export async function deleteRolesByIds(req: Request, res: Response) {
   try {
     const rolesId = parseRequiredIntArray(req.body.rolesId ?? req.body.roleIds, "rolesId");
+    const targetRoles = await Promise.all(rolesId.map((id) => roleService.getRoleById(id, true)));
+    for (const role of targetRoles) {
+      if (!role) {
+        continue;
+      }
+      assertActorCanManageRolePrecedence(req.authUser, role.precedence);
+    }
     const result = await roleService.deleteRolesByIds(rolesId);
 
     sendSuccess(res, 200, "Roles deleted successfully.", result);
@@ -188,6 +249,12 @@ export async function restoreRoleById(req: Request, res: Response) {
     });
 
     const iMasterId = parseRequiredInt(req.params.iMasterId ?? req.params.id, "iMasterId");
+    const existingRole = await roleService.getRoleById(iMasterId, true);
+    if (!existingRole) {
+      throw new ApiError(404, "Role not found.");
+    }
+
+    assertActorCanManageRolePrecedence(req.authUser, existingRole.precedence);
     const role = await roleService.restoreRoleById(iMasterId);
 
     sendSuccess(res, 200, "Role restored successfully.", role);

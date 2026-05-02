@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
+import { requirePermission } from "../middlewares/permission.middleware";
 import { ApiError } from "../utils/api-error";
 import { handleControllerError, sendSuccess } from "../utils/error-handler";
 
@@ -14,6 +15,12 @@ export type CrudRouteConfig = {
   updateFields?: Record<string, FieldType>;
   searchableFields?: string[];
   defaultOrderBy?: Record<string, "asc" | "desc">;
+  permissions?: {
+    create: string;
+    view: string;
+    update: string;
+    delete: string;
+  };
 };
 
 function getDelegate(model: string) {
@@ -143,7 +150,7 @@ export function createCrudRouter(config: CrudRouteConfig) {
   const searchableFields = config.searchableFields ?? ["sCode", "sName", "description"];
   const orderBy = config.defaultOrderBy ?? { [config.idField]: "asc" };
 
-  router.post("/", async (req, res) => {
+  router.post("/", ...(config.permissions ? [requirePermission(config.permissions.create)] : []), async (req, res) => {
     try {
       const data = pickData(req.body, config.createFields);
       const created = await delegate.create({ data });
@@ -153,7 +160,7 @@ export function createCrudRouter(config: CrudRouteConfig) {
     }
   });
 
-  router.get("/", async (req, res) => {
+  router.get("/", ...(config.permissions ? [requirePermission(config.permissions.view)] : []), async (req, res) => {
     try {
       const where = buildWhere(req.query, { ...config.createFields, ...updateFields }, searchableFields);
       if (!shouldIncludeDeleted(req.query)) {
@@ -171,7 +178,7 @@ export function createCrudRouter(config: CrudRouteConfig) {
     }
   });
 
-  router.get("/:id", async (req, res) => {
+  router.get("/:id", ...(config.permissions ? [requirePermission(config.permissions.view)] : []), async (req, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isInteger(id)) {
@@ -194,7 +201,7 @@ export function createCrudRouter(config: CrudRouteConfig) {
     }
   });
 
-  router.patch("/:id", async (req, res) => {
+  router.patch("/:id", ...(config.permissions ? [requirePermission(config.permissions.update)] : []), async (req, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isInteger(id)) {
@@ -209,7 +216,7 @@ export function createCrudRouter(config: CrudRouteConfig) {
     }
   });
 
-  router.delete("/:id", async (req, res) => {
+  router.delete("/:id", ...(config.permissions ? [requirePermission(config.permissions.delete)] : []), async (req, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isInteger(id)) {

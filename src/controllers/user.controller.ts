@@ -52,7 +52,7 @@ export async function createUser(req: Request, res: Response) {
         "createdByUserId",
         "isActive",
       ],
-      requiredFields: ["username", "password", "iRoleMasterId", "iUserTypeMasterId", "createdByUserId"],
+      requiredFields: ["username", "password", "iRoleMasterId", "iUserTypeMasterId"],
     });
 
     const username = parseRequiredString(req.body.username, "username");
@@ -60,7 +60,15 @@ export async function createUser(req: Request, res: Response) {
     const password = parseRequiredString(req.body.password, "password");
     const iRoleMasterId = parseRequiredInt(req.body.iRoleMasterId, "iRoleMasterId");
     const iUserTypeMasterId = parseRequiredInt(req.body.iUserTypeMasterId, "iUserTypeMasterId");
-    const createdByUserId = parseRequiredInt(req.body.createdByUserId, "createdByUserId");
+    const createdByUserIdFromBody = parseOptionalInt(req.body.createdByUserId, "createdByUserId");
+    const createdByUserId = req.authUser?.iMasterId ?? createdByUserIdFromBody;
+    if (!createdByUserId) {
+      throw new ApiError(401, "Authenticated creator user is required.");
+    }
+
+    if (createdByUserIdFromBody && req.authUser && createdByUserIdFromBody !== req.authUser.iMasterId) {
+      throw new ApiError(403, "createdByUserId must match current authenticated user.");
+    }
     const isActive = parseOptionalBoolean(req.body.isActive, "isActive");
 
     const user = await userService.createUser({

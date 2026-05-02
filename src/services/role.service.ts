@@ -124,6 +124,13 @@ class RoleService {
     });
   }
 
+  async getRoleBySCode(sCode: string, includeDeleted = false) {
+    return prisma.mRoles.findFirst({
+      where: { sCode, isDeleted: includeDeleted ? undefined : false },
+      select: roleSelect,
+    });
+  }
+
   async updateRoleById(iMasterId: number, input: UpdateRoleInput) {
     const role = await this.getRoleById(iMasterId);
 
