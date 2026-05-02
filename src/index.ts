@@ -7,6 +7,9 @@ import { authenticate } from "./middlewares/auth.middleware";
 import { requireDashboardAccess } from "./middlewares/dashboard.middleware";
 import accessRouter from "./modules/access/access.routes";
 import assignmentRouter from "./modules/assignment/assignment.routes";
+import heroAuthRouter from "./modules/hero-auth/hero-auth.routes";
+import { heroOnboardingRouter, heroRouter } from "./modules/hero-onboarding/hero-onboarding.routes";
+import heroVerificationRouter from "./modules/hero-verification/hero-verification.routes";
 import locationRouter from "./modules/location/location.routes";
 import workerRouter from "./modules/worker/worker.routes";
 import authRouter from "./routes/auth.routes";
@@ -57,13 +60,17 @@ app.get("/api-docs.json", (req, res) => {
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use("/api/auth", authRouter);
+app.use("/api/hero-auth", heroAuthRouter);
 app.use("/api/service-locations", serviceLocationRouter);
 app.use("/api/roles", authenticate, requireDashboardAccess, roleRouter);
 app.use("/api/user-types", authenticate, requireDashboardAccess, userTypeRouter);
 app.use("/api/users", authenticate, requireDashboardAccess, userRouter);
+app.use("/api/hero-onboarding", authenticate, heroOnboardingRouter);
+app.use("/api/hero", authenticate, heroRouter);
 app.use("/api", authenticate, locationRouter);
 app.use("/api", authenticate, requireDashboardAccess, accessRouter);
 app.use("/api/assignment", authenticate, requireDashboardAccess, assignmentRouter);
+app.use("/api/dashboard/hero-verifications", authenticate, requireDashboardAccess, heroVerificationRouter);
 app.use("/api/worker", authenticate, workerRouter);
 app.use("/api", authenticate, requireDashboardAccess, architectureRouter);
 

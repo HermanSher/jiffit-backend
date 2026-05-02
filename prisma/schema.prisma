@@ -111,6 +111,15 @@ enum DeviceAppType {
   DASHBOARD
 }
 
+enum HeroVerificationStatus {
+  DRAFT
+  SUBMITTED
+  PENDING_HUB_VERIFICATION
+  VERIFIED
+  REJECTED
+  RESUBMISSION_REQUIRED
+}
+
 model mRoles {
   iMasterId             Int       @id @default(autoincrement())
   sCode                 String    @unique
@@ -171,6 +180,7 @@ model mUsers {
   userType              mUserTypes?              @relation(fields: [iUserTypeMasterId], references: [iMasterId])
   addresses             mUserAddresses[]
   heroProfile           mHeroProfiles?
+  heroOnboardingApplication tHeroOnboardingApplications? @relation("HeroOnboardingApplicant")
   customerProfile       mCustomerProfiles?
   employeeProfile       mEmployeeProfiles?
   heroServiceMappings   mHeroServiceMappings[]   @relation("HeroServiceMappings")
@@ -189,6 +199,7 @@ model mUsers {
   bookingStatusChanges  tBookingStatusHistory[]  @relation("BookingStatusChangedBy")
   assignmentAttempts    tAssignmentAttempts[]    @relation("AssignmentAttemptHero")
   idempotencyKeys       tIdempotencyKeys[]       @relation("IdempotencyCreatedBy")
+  verifiedHeroOnboardingApplications tHeroOnboardingApplications[] @relation("HeroOnboardingVerifiedBy")
 
   @@map("musers")
 }
@@ -231,6 +242,8 @@ model mHeroProfiles {
   isActive              Boolean     @default(true)
   isAvailable           Boolean     @default(true)
   workerState           WorkerState @default(OFFLINE)
+  isVerified            Boolean     @default(false)
+  verificationStatus    HeroVerificationStatus @default(DRAFT)
   isDeleted             Boolean     @default(false)
   deletedAt             DateTime?
   deletedByUserMasterId Int?
@@ -537,6 +550,72 @@ model mHeroLiveLocations {
   @@index([latitude, longitude])
   @@index([lastUpdatedAt])
   @@map("mherolivelocations")
+}
+
+model mHubs {
+  iMasterId     Int      @id @default(autoincrement())
+  sName         String
+  addressLine1  String
+  city          String
+  latitude      Decimal  @db.Decimal(10, 7)
+  longitude     Decimal  @db.Decimal(10, 7)
+  contactNumber String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  onboardingApplications tHeroOnboardingApplications[]
+
+  @@index([city])
+  @@index([isActive])
+  @@index([latitude, longitude])
+  @@map("mhubs")
+}
+
+model tHeroOnboardingApplications {
+  iTransId                 Int                    @id @default(autoincrement())
+  iHeroUserMasterId        Int                    @unique
+  fullName                 String
+  mobileNumber             String
+  email                    String?
+  dateOfBirth              DateTime?
+  gender                   String?
+  fatherName               String?
+  alternateMobileNumber    String?
+  addressLine1             String
+  addressLine2             String?
+  city                     String
+  state                    String?
+  pincode                  String?
+  latitude                 Decimal?               @db.Decimal(10, 7)
+  longitude                Decimal?               @db.Decimal(10, 7)
+  selectedJobRole          String?
+  selectedCity             String?
+  workType                 String?
+  vehicleType              String?
+  earningsType             String?
+  onboardingSource         String?
+  referralCode             String?
+  verificationStatus       HeroVerificationStatus @default(DRAFT)
+  nearestHubId             Int?
+  submittedAt              DateTime?
+  verifiedAt               DateTime?
+  verifiedByUserMasterId   Int?
+  rejectionReason          String?                @db.Text
+  adminRemarks             String?                @db.Text
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+
+  hero        mUsers @relation("HeroOnboardingApplicant", fields: [iHeroUserMasterId], references: [iMasterId], onDelete: Cascade)
+  nearestHub  mHubs? @relation(fields: [nearestHubId], references: [iMasterId], onDelete: SetNull)
+  verifiedBy  mUsers? @relation("HeroOnboardingVerifiedBy", fields: [verifiedByUserMasterId], references: [iMasterId], onDelete: SetNull)
+
+  @@index([verificationStatus])
+  @@index([nearestHubId])
+  @@index([verifiedByUserMasterId])
+  @@index([city])
+  @@index([submittedAt])
+  @@map("theroonboardingapplications")
 }
 
 model tBookings {

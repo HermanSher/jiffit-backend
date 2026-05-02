@@ -14,6 +14,8 @@ class WorkerRepository {
         isActive: true,
         isAvailable: true,
         workerState: true,
+        isVerified: true,
+        verificationStatus: true,
       },
     });
   }

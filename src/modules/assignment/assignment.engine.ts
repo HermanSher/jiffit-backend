@@ -1,4 +1,4 @@
-import { WorkerState } from "@prisma/client";
+import { HeroVerificationStatus, WorkerState } from "@prisma/client";
 import { locationConfig } from "../../config/location.config";
 import { assignmentRepository } from "./assignment.repository";
 
@@ -123,7 +123,13 @@ class AssignmentEngine {
       const profile = hero.heroProfile;
       const liveLocation = hero.heroLiveLocation;
 
-      if (!profile || !profile.isActive || !this.isProfileAvailable(profile.workerState)) {
+      if (
+        !profile ||
+        !profile.isActive ||
+        !profile.isVerified ||
+        profile.verificationStatus !== HeroVerificationStatus.VERIFIED ||
+        !this.isProfileAvailable(profile.workerState)
+      ) {
         continue;
       }
 

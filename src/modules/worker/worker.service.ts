@@ -1,4 +1,4 @@
-import { WorkerState } from "@prisma/client";
+import { HeroVerificationStatus, WorkerState } from "@prisma/client";
 import { locationConfig } from "../../config/location.config";
 import { assignmentService } from "../assignment/assignment.service";
 import { eventBusService } from "../events/event-bus.service";
@@ -33,6 +33,12 @@ class WorkerService {
     return state === WorkerState.AVAILABLE;
   }
 
+  private assertVerifiedHero(profile: { isVerified: boolean; verificationStatus: HeroVerificationStatus }): void {
+    if (!profile.isVerified || profile.verificationStatus !== HeroVerificationStatus.VERIFIED) {
+      throw new ApiError(403, "Hero must be physically verified at a Jiffit hub before going online.");
+    }
+  }
+
   private assertTransition(current: WorkerState, next: WorkerState): void {
     if (current === next) {
       return;
@@ -64,6 +70,7 @@ class WorkerService {
       throw new ApiError(404, "Active hero profile not found.");
     }
 
+    this.assertVerifiedHero(profile);
     this.assertTransition(profile.workerState, WorkerState.ONLINE);
     return workerRepository.updateWorkerState(user.iMasterId, WorkerState.ONLINE, false);
   }
@@ -91,6 +98,10 @@ class WorkerService {
     const profile = await workerRepository.getHeroProfileByUserId(user.iMasterId);
     if (!profile || !profile.isActive) {
       throw new ApiError(404, "Active hero profile not found.");
+    }
+
+    if (state !== WorkerState.OFFLINE) {
+      this.assertVerifiedHero(profile);
     }
 
     this.assertTransition(profile.workerState, state);

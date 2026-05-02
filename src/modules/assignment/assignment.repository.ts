@@ -3,6 +3,7 @@ import {
   BookingAssignmentStatus,
   BookingStatus,
   EmploymentStatus,
+  HeroVerificationStatus,
   Prisma,
   WorkerState,
 } from "@prisma/client";
@@ -57,6 +58,12 @@ class AssignmentRepository {
           isDeleted: false,
           isActive: true,
           employmentStatus: EmploymentStatus.ACTIVE,
+          heroProfile: {
+            is: {
+              isVerified: true,
+              verificationStatus: HeroVerificationStatus.VERIFIED,
+            },
+          },
         },
       },
       include: {
