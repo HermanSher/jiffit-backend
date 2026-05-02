@@ -183,13 +183,6 @@ class HeroAuthService {
       sessionId: session.id,
     };
 
-    if (!user.heroOnboardingApplication && !user.heroProfile?.isVerified) {
-      await heroOnboardingService.saveDraft(authUser, {
-        fullName: this.buildFullName(user),
-        mobileNumber: user.mobileNo ?? input.mobileNumber,
-      });
-    }
-
     const status = await heroOnboardingService.getStatus(authUser);
 
     return {

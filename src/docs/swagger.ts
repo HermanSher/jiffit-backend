@@ -1975,6 +1975,33 @@ Object.assign((swaggerSpec as any).components.schemas, {
       distanceKm: { type: "number", nullable: true, example: 2.4 },
     },
   },
+  HeroService: {
+    type: "object",
+    properties: {
+      id: { type: "integer", example: 5 },
+      code: { type: "string", example: "AC_REPAIR" },
+      name: { type: "string", example: "AC Repair" },
+      description: { type: "string", nullable: true, example: "Repair and servicing for home AC units." },
+      shortDescription: { type: "string", nullable: true, example: "AC repair and service" },
+      basePrice: { type: "number", example: 499 },
+      salePrice: { type: "number", nullable: true, example: 399 },
+      estimatedDurationMinutes: { type: "integer", example: 60 },
+      category: {
+        type: "object",
+        properties: {
+          id: { type: "integer", example: 1 },
+          name: { type: "string", example: "Home Services" },
+        },
+      },
+      serviceType: {
+        type: "object",
+        properties: {
+          id: { type: "integer", example: 1 },
+          name: { type: "string", example: "Repair" },
+        },
+      },
+    },
+  },
   HeroOnboardingApplication: {
     type: "object",
     properties: {
@@ -1988,8 +2015,19 @@ Object.assign((swaggerSpec as any).components.schemas, {
       city: { type: "string", nullable: true, example: "Patna" },
       state: { type: "string", nullable: true, example: "Bihar" },
       pincode: { type: "string", nullable: true, example: "800001" },
+      latitude: { type: "number", nullable: true, example: 19.076 },
+      longitude: { type: "number", nullable: true, example: 72.8777 },
       selectedCity: { type: "string", nullable: true, example: "Patna" },
       selectedJobRole: { type: "string", nullable: true, example: "Service Hero" },
+      selectedServiceIds: {
+        type: "array",
+        items: { type: "integer" },
+        example: [5, 8],
+      },
+      selectedServices: {
+        type: "array",
+        items: { $ref: "#/components/schemas/HeroService" },
+      },
       workType: { type: "string", nullable: true, example: "FIELD_WORK" },
       vehicleType: { type: "string", nullable: true, example: "TWO_WHEELER" },
       earningsType: { type: "string", nullable: true, example: "PER_JOB" },
@@ -2024,17 +2062,25 @@ Object.assign((swaggerSpec as any).components.schemas, {
   },
   HeroOnboardingDraftRequest: {
     type: "object",
-    required: ["fullName", "mobileNumber"],
+    description:
+      "Partial draft lead update. First call should include fullName and mobileNumber; later calls can save service IDs or GPS location.",
     properties: {
       fullName: { type: "string", example: "Amit Kumar" },
       mobileNumber: { type: "string", example: "9876543210" },
       selectedCity: { type: "string", example: "Patna" },
       selectedJobRole: { type: "string", example: "Service Hero" },
+      selectedServiceIds: {
+        type: "array",
+        items: { type: "integer" },
+        example: [5, 8],
+      },
+      latitude: { type: "number", example: 19.076 },
+      longitude: { type: "number", example: 72.8777 },
     },
   },
   HeroOnboardingSubmitRequest: {
     type: "object",
-    required: ["fullName", "mobileNumber", "addressLine1", "city"],
+    required: ["fullName", "mobileNumber"],
     properties: {
       fullName: { type: "string", example: "Amit Kumar" },
       mobileNumber: { type: "string", example: "9876543210" },
@@ -2042,6 +2088,13 @@ Object.assign((swaggerSpec as any).components.schemas, {
       city: { type: "string", example: "Patna" },
       selectedCity: { type: "string", example: "Patna" },
       selectedJobRole: { type: "string", example: "Service Hero" },
+      selectedServiceIds: {
+        type: "array",
+        items: { type: "integer" },
+        example: [5, 8],
+      },
+      latitude: { type: "number", example: 19.076 },
+      longitude: { type: "number", example: 72.8777 },
       workType: { type: "string", example: "FIELD_WORK" },
       vehicleType: { type: "string", example: "TWO_WHEELER" },
       earningsType: { type: "string", example: "PER_JOB" },
@@ -2176,6 +2229,38 @@ Object.assign((swaggerSpec as any).components.schemas, {
     responses: {
       "200": { description: "Hero onboarding application", content: { "application/json": { schema: { type: "object" } } } },
       "404": { description: "Application not found", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+    },
+  },
+};
+
+(swaggerSpec as any).paths["/api/hero/services"] = {
+  get: {
+    tags: ["Hero Onboarding"],
+    summary: "List active services available for Hero onboarding",
+    security: [{ bearerAuth: [] }],
+    responses: {
+      "200": {
+        description: "Active services",
+        content: {
+          "application/json": {
+            schema: {
+              allOf: [
+                { $ref: "#/components/schemas/ApiSuccess" },
+                {
+                  type: "object",
+                  properties: {
+                    data: {
+                      type: "array",
+                      items: { $ref: "#/components/schemas/HeroService" },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+      "401": { description: "Authentication required", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
     },
   },
 };

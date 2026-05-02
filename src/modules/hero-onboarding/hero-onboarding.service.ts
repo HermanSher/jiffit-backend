@@ -29,6 +29,17 @@ export type HeroOnboardingInput = {
   earningsType?: string;
   onboardingSource?: string;
   referralCode?: string;
+  selectedServiceIds?: number[];
+};
+
+export type HeroOnboardingDraftInput = {
+  fullName?: string;
+  mobileNumber?: string;
+  selectedCity?: string;
+  selectedJobRole?: string;
+  latitude?: number;
+  longitude?: number;
+  selectedServiceIds?: number[];
 };
 
 class HeroOnboardingService {
@@ -70,6 +81,8 @@ class HeroOnboardingService {
       return null;
     }
 
+    const serviceMappings = application.hero?.heroServiceMappings ?? [];
+
     return {
       id: application.iTransId,
       heroUserId: application.iHeroUserMasterId,
@@ -89,6 +102,8 @@ class HeroOnboardingService {
       longitude: application.longitude ? Number(application.longitude) : null,
       selectedJobRole: application.selectedJobRole,
       selectedCity: application.selectedCity,
+      selectedServiceIds: serviceMappings.map((mapping) => mapping.iServiceMasterId),
+      selectedServices: serviceMappings.map((mapping) => this.serializeService(mapping.service)),
       workType: application.workType,
       vehicleType: application.vehicleType,
       earningsType: application.earningsType,
@@ -101,6 +116,41 @@ class HeroOnboardingService {
       adminRemarks: application.adminRemarks,
       nearestHub: application.nearestHub ? this.serializeHub(application.nearestHub) : null,
     };
+  }
+
+  private serializeService(service: Awaited<ReturnType<typeof heroOnboardingRepository.getActiveServices>>[number]) {
+    return {
+      id: service.iMasterId,
+      code: service.sCode,
+      name: service.sName,
+      description: service.description,
+      shortDescription: service.shortDescription,
+      basePrice: Number(service.basePrice),
+      salePrice: service.salePrice ? Number(service.salePrice) : null,
+      estimatedDurationMinutes: service.estimatedDurationMinutes,
+      category: {
+        id: service.category.iMasterId,
+        name: service.category.sName,
+      },
+      serviceType: {
+        id: service.serviceType.iMasterId,
+        name: service.serviceType.sName,
+      },
+    };
+  }
+
+  private async assertActiveServices(selectedServiceIds?: number[]) {
+    if (selectedServiceIds === undefined) {
+      return;
+    }
+
+    const uniqueServiceIds = [...new Set(selectedServiceIds)];
+    const activeServiceIds = await heroOnboardingRepository.findActiveServiceIds(uniqueServiceIds);
+    const missingServiceIds = uniqueServiceIds.filter((id) => !activeServiceIds.includes(id));
+
+    if (missingServiceIds.length > 0) {
+      throw new ApiError(400, `Invalid or inactive service IDs: ${missingServiceIds.join(", ")}.`);
+    }
   }
 
   async findNearestHub(input: { latitude?: number; longitude?: number; city?: string }) {
@@ -123,6 +173,11 @@ class HeroOnboardingService {
     const city = parseOptionalString(input.city)?.toUpperCase();
     const cityMatch = city ? hubs.find((hub) => hub.city.trim().toUpperCase() === city) : undefined;
     return this.serializeHub(cityMatch ?? hubs[0]);
+  }
+
+  async getServices() {
+    const services = await heroOnboardingRepository.getActiveServices();
+    return services.map((service) => this.serializeService(service));
   }
 
   async getStatus(user: AuthenticatedUser) {
@@ -169,6 +224,8 @@ class HeroOnboardingService {
       throw new ApiError(400, "Hero is already verified.");
     }
 
+    await this.assertActiveServices(input.selectedServiceIds);
+
     const nearestHub = await this.findNearestHub({
       latitude: input.latitude,
       longitude: input.longitude,
@@ -181,6 +238,7 @@ class HeroOnboardingService {
       latitude: this.toDecimal(input.latitude),
       longitude: this.toDecimal(input.longitude),
       nearestHubId: nearestHub?.id ?? null,
+      selectedServiceIds: input.selectedServiceIds,
     });
 
     return {
@@ -196,13 +254,14 @@ class HeroOnboardingService {
     return this.submit(user, input);
   }
 
-  async saveDraft(
-    user: AuthenticatedUser,
-    input: Pick<HeroOnboardingInput, "fullName" | "mobileNumber" | "selectedCity" | "selectedJobRole">,
-  ) {
+  async saveDraft(user: AuthenticatedUser, input: HeroOnboardingDraftInput) {
     this.assertHeroUser(user);
 
-    const profile = await heroOnboardingRepository.getHeroProfileByUserId(user.iMasterId);
+    const [profile, existingApplication] = await Promise.all([
+      heroOnboardingRepository.getHeroProfileByUserId(user.iMasterId),
+      heroOnboardingRepository.getApplicationByHeroId(user.iMasterId),
+    ]);
+
     if (!profile || !profile.isActive) {
       throw new ApiError(404, "Active hero profile not found.");
     }
@@ -211,16 +270,46 @@ class HeroOnboardingService {
       throw new ApiError(400, "Hero is already verified.");
     }
 
+    if (
+      profile.verificationStatus === HeroVerificationStatus.SUBMITTED ||
+      profile.verificationStatus === HeroVerificationStatus.PENDING_HUB_VERIFICATION
+    ) {
+      throw new ApiError(400, "Hero onboarding is already submitted for hub verification.");
+    }
+
+    await this.assertActiveServices(input.selectedServiceIds);
+
+    const fullName = input.fullName ?? existingApplication?.fullName;
+    const mobileNumber = input.mobileNumber ?? existingApplication?.mobileNumber;
+
+    if (!fullName || !mobileNumber) {
+      throw new ApiError(400, "fullName and mobileNumber are required before saving draft progress.");
+    }
+
+    const nearestHub =
+      input.latitude !== undefined || input.longitude !== undefined || input.selectedCity
+        ? await this.findNearestHub({
+            latitude: input.latitude,
+            longitude: input.longitude,
+            city: input.selectedCity ?? existingApplication?.selectedCity ?? existingApplication?.city ?? undefined,
+          })
+        : null;
+
     const application = await heroOnboardingRepository.upsertDraftApplication({
       iHeroUserMasterId: user.iMasterId,
-      fullName: input.fullName,
-      mobileNumber: input.mobileNumber,
-      selectedCity: input.selectedCity,
-      selectedJobRole: input.selectedJobRole,
+      fullName,
+      mobileNumber,
+      selectedCity: input.selectedCity ?? existingApplication?.selectedCity ?? undefined,
+      selectedJobRole: input.selectedJobRole ?? existingApplication?.selectedJobRole ?? undefined,
+      latitude: input.latitude !== undefined ? this.toDecimal(input.latitude) : existingApplication?.latitude ?? null,
+      longitude: input.longitude !== undefined ? this.toDecimal(input.longitude) : existingApplication?.longitude ?? null,
+      nearestHubId: nearestHub?.id ?? existingApplication?.nearestHubId ?? null,
+      selectedServiceIds: input.selectedServiceIds,
     });
 
     return {
       application: this.serializeApplication(application),
+      nearestHub,
       message: "Aapka profile draft me save ho gaya ✅",
     };
   }

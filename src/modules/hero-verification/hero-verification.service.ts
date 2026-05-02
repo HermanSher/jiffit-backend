@@ -66,6 +66,12 @@ class HeroVerificationService {
       longitude: application.longitude ? Number(application.longitude) : null,
       selectedJobRole: application.selectedJobRole,
       selectedCity: application.selectedCity,
+      selectedServiceIds: application.hero.heroServiceMappings.map((mapping) => mapping.iServiceMasterId),
+      selectedServices: application.hero.heroServiceMappings.map((mapping) => ({
+        id: mapping.service.iMasterId,
+        code: mapping.service.sCode,
+        name: mapping.service.sName,
+      })),
       workType: application.workType,
       vehicleType: application.vehicleType,
       earningsType: application.earningsType,

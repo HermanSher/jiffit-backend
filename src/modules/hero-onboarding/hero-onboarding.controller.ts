@@ -32,9 +32,18 @@ const ONBOARDING_FIELDS = [
   "earningsType",
   "onboardingSource",
   "referralCode",
+  "selectedServiceIds",
 ];
 
-const DRAFT_FIELDS = ["fullName", "mobileNumber", "selectedCity", "selectedJobRole"];
+const DRAFT_FIELDS = [
+  "fullName",
+  "mobileNumber",
+  "selectedCity",
+  "selectedJobRole",
+  "selectedServiceIds",
+  "latitude",
+  "longitude",
+];
 
 function requireAuthUser(req: Request) {
   if (!req.authUser) {
@@ -57,10 +66,30 @@ function parseOptionalNumber(value: unknown, fieldName: string): number | undefi
   return parsed;
 }
 
-function parsePayload(body: Record<string, unknown>): HeroOnboardingInput {
-  const latitude = parseOptionalNumber(body.latitude, "latitude");
-  const longitude = parseOptionalNumber(body.longitude, "longitude");
+function parseOptionalIntArray(value: unknown, fieldName: string): number[] | undefined {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
 
+  if (!Array.isArray(value)) {
+    throw new ApiError(400, `${fieldName} must be an array of integers.`);
+  }
+
+  return [
+    ...new Set(
+      value.map((item, index) => {
+        const parsed = Number(item);
+        if (!Number.isInteger(parsed) || parsed <= 0) {
+          throw new ApiError(400, `${fieldName}[${index}] must be a positive integer.`);
+        }
+
+        return parsed;
+      }),
+    ),
+  ];
+}
+
+function assertCoordinateRanges(latitude: number | undefined, longitude: number | undefined): void {
   if (latitude !== undefined && (latitude < -90 || latitude > 90)) {
     throw new ApiError(400, "latitude must be between -90 and 90.");
   }
@@ -68,6 +97,12 @@ function parsePayload(body: Record<string, unknown>): HeroOnboardingInput {
   if (longitude !== undefined && (longitude < -180 || longitude > 180)) {
     throw new ApiError(400, "longitude must be between -180 and 180.");
   }
+}
+
+function parsePayload(body: Record<string, unknown>): HeroOnboardingInput {
+  const latitude = parseOptionalNumber(body.latitude, "latitude");
+  const longitude = parseOptionalNumber(body.longitude, "longitude");
+  assertCoordinateRanges(latitude, longitude);
 
   return {
     fullName: parseRequiredString(body.fullName, "fullName"),
@@ -91,6 +126,7 @@ function parsePayload(body: Record<string, unknown>): HeroOnboardingInput {
     earningsType: parseOptionalString(body.earningsType),
     onboardingSource: parseOptionalString(body.onboardingSource),
     referralCode: parseOptionalString(body.referralCode),
+    selectedServiceIds: parseOptionalIntArray(body.selectedServiceIds, "selectedServiceIds"),
   };
 }
 
@@ -116,7 +152,7 @@ export async function submitHeroOnboarding(req: Request, res: Response) {
   try {
     validateRequestBodyFields(req.body, {
       allowedFields: ONBOARDING_FIELDS,
-      requiredFields: ["fullName", "mobileNumber", "addressLine1", "city"],
+      requiredFields: ["fullName", "mobileNumber"],
     });
 
     const result = await heroOnboardingService.submit(requireAuthUser(req), parsePayload(req.body));
@@ -130,14 +166,24 @@ export async function saveHeroOnboardingDraft(req: Request, res: Response) {
   try {
     validateRequestBodyFields(req.body, {
       allowedFields: DRAFT_FIELDS,
-      requiredFields: ["fullName", "mobileNumber"],
+      atLeastOneFieldFrom: DRAFT_FIELDS,
     });
 
+    const latitude = parseOptionalNumber(req.body.latitude, "latitude");
+    const longitude = parseOptionalNumber(req.body.longitude, "longitude");
+    assertCoordinateRanges(latitude, longitude);
+
     const result = await heroOnboardingService.saveDraft(requireAuthUser(req), {
-      fullName: parseRequiredString(req.body.fullName, "fullName"),
-      mobileNumber: parseIndianMobileNumber(parseRequiredString(req.body.mobileNumber, "mobileNumber")),
+      fullName: parseOptionalString(req.body.fullName),
+      mobileNumber:
+        req.body.mobileNumber === undefined
+          ? undefined
+          : parseIndianMobileNumber(parseRequiredString(req.body.mobileNumber, "mobileNumber")),
       selectedCity: parseOptionalString(req.body.selectedCity),
       selectedJobRole: parseOptionalString(req.body.selectedJobRole),
+      selectedServiceIds: parseOptionalIntArray(req.body.selectedServiceIds, "selectedServiceIds"),
+      latitude,
+      longitude,
     });
 
     sendSuccess(res, 200, result.message, result);
@@ -150,7 +196,7 @@ export async function resubmitHeroOnboarding(req: Request, res: Response) {
   try {
     validateRequestBodyFields(req.body, {
       allowedFields: ONBOARDING_FIELDS,
-      requiredFields: ["fullName", "mobileNumber", "addressLine1", "city"],
+      requiredFields: ["fullName", "mobileNumber"],
     });
 
     const result = await heroOnboardingService.resubmit(requireAuthUser(req), parsePayload(req.body));
@@ -169,6 +215,15 @@ export async function getNearestHub(req: Request, res: Response) {
     });
 
     sendSuccess(res, 200, "Nearest hub fetched successfully.", hub);
+  } catch (error) {
+    handleControllerError(res, error);
+  }
+}
+
+export async function getHeroServices(req: Request, res: Response) {
+  try {
+    const services = await heroOnboardingService.getServices();
+    sendSuccess(res, 200, "Hero services fetched successfully.", services);
   } catch (error) {
     handleControllerError(res, error);
   }

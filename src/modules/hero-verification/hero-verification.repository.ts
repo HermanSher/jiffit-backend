@@ -41,6 +41,26 @@ class HeroVerificationRepository {
             workerState: true,
           },
         },
+        heroServiceMappings: {
+          where: {
+            isActive: true,
+            isDeleted: false,
+          },
+          include: {
+            service: {
+              select: {
+                iMasterId: true,
+                sCode: true,
+                sName: true,
+              },
+            },
+          },
+          orderBy: {
+            service: {
+              sName: "asc",
+            },
+          },
+        },
       },
     },
     nearestHub: true,

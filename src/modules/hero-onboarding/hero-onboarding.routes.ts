@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   getHeroOnboardingApplication,
   getHeroOnboardingStatus,
+  getHeroServices,
   getNearestHub,
   resubmitHeroOnboarding,
   saveHeroOnboardingDraft,
@@ -18,3 +19,4 @@ heroOnboardingRouter.post("/submit", submitHeroOnboarding);
 heroOnboardingRouter.patch("/resubmit", resubmitHeroOnboarding);
 
 heroRouter.get("/nearest-hub", getNearestHub);
+heroRouter.get("/services", getHeroServices);
