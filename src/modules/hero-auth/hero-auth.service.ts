@@ -32,18 +32,46 @@ class HeroAuthService {
     return `hero_${mobileNumber.replace(/\D/g, "")}`;
   }
 
+  private buildFullName(user: {
+    firstName?: string | null;
+    middleName?: string | null;
+    lastName?: string | null;
+    mobileNo?: string | null;
+    username: string;
+    heroOnboardingApplication?: { fullName: string } | null;
+  }): string {
+    if (user.heroOnboardingApplication?.fullName?.trim()) {
+      return user.heroOnboardingApplication.fullName.trim();
+    }
+
+    const parts = [user.firstName, user.middleName, user.lastName]
+      .map((value) => value?.trim())
+      .filter((value): value is string => Boolean(value));
+
+    if (parts.length > 0) {
+      return parts.join(" ");
+    }
+
+    return user.mobileNo ? `Hero ${user.mobileNo}` : user.username;
+  }
+
   private buildUserPayload(user: {
     iMasterId: number;
     username: string;
     mobileNo: string | null;
+    firstName?: string | null;
+    middleName?: string | null;
+    lastName?: string | null;
     role: { sName: string; sCode: string } | null;
     userType: { sName: string; sCode: string } | null;
     heroProfile: { isVerified: boolean; verificationStatus: string } | null;
+    heroOnboardingApplication?: { fullName: string } | null;
   }) {
     return {
       id: user.iMasterId,
       username: user.username,
       mobileNumber: user.mobileNo ?? "",
+      fullName: this.buildFullName(user),
       role: user.role?.sName ?? "Hero",
       roleCode: user.role?.sCode ?? "HERO",
       userType: user.userType?.sName ?? "Hero",
@@ -122,7 +150,7 @@ class HeroAuthService {
 
     await heroAuthRepository.rotateSessionToken(session.id, sha256(refreshToken), sessionExpiry);
 
-    const status = await heroOnboardingService.getStatus({
+    const authUser = {
       iMasterId: user.iMasterId,
       username: user.username,
       iRoleMasterId: user.iRoleMasterId ?? null,
@@ -135,7 +163,16 @@ class HeroAuthService {
       isActive: user.isActive,
       employmentStatus: user.employmentStatus,
       sessionId: session.id,
-    });
+    };
+
+    if (!user.heroOnboardingApplication && !user.heroProfile?.isVerified) {
+      await heroOnboardingService.saveDraft(authUser, {
+        fullName: this.buildFullName(user),
+        mobileNumber: user.mobileNo ?? input.mobileNumber,
+      });
+    }
+
+    const status = await heroOnboardingService.getStatus(authUser);
 
     return {
       accessToken,

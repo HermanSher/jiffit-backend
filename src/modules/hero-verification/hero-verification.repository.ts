@@ -8,6 +8,23 @@ export type HeroVerificationFilters = {
   limit: number;
 };
 
+export type HeroVerificationUpdateInput = {
+  fullName?: string;
+  selectedCity?: string | null;
+  selectedJobRole?: string | null;
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  pincode?: string | null;
+  workType?: string | null;
+  vehicleType?: string | null;
+  earningsType?: string | null;
+  adminRemarks?: string | null;
+  verificationStatus?: HeroVerificationStatus;
+  verifiedByUserMasterId?: number;
+};
+
 class HeroVerificationRepository {
   private includeDetails = {
     hero: {
@@ -62,6 +79,65 @@ class HeroVerificationRepository {
     return prisma.tHeroOnboardingApplications.findFirst({
       where: { iTransId },
       include: this.includeDetails,
+    });
+  }
+
+  updateApplication(iTransId: number, input: HeroVerificationUpdateInput) {
+    return prisma.$transaction(async (tx) => {
+      const application = await tx.tHeroOnboardingApplications.update({
+        where: { iTransId },
+        data: {
+          fullName: input.fullName,
+          selectedCity: input.selectedCity,
+          selectedJobRole: input.selectedJobRole,
+          addressLine1: input.addressLine1,
+          addressLine2: input.addressLine2,
+          city: input.city,
+          state: input.state,
+          pincode: input.pincode,
+          workType: input.workType,
+          vehicleType: input.vehicleType,
+          earningsType: input.earningsType,
+          adminRemarks: input.adminRemarks,
+          verificationStatus: input.verificationStatus,
+          submittedAt:
+            input.verificationStatus === HeroVerificationStatus.PENDING_HUB_VERIFICATION
+              ? new Date()
+              : undefined,
+          verifiedAt: input.verificationStatus === HeroVerificationStatus.VERIFIED ? new Date() : undefined,
+          verifiedByUserMasterId:
+            input.verificationStatus === HeroVerificationStatus.VERIFIED ? input.verifiedByUserMasterId : undefined,
+          rejectionReason: input.verificationStatus ? null : undefined,
+        },
+        include: this.includeDetails,
+      });
+
+      if (input.verificationStatus === HeroVerificationStatus.VERIFIED) {
+        await tx.mHeroProfiles.updateMany({
+          where: {
+            iUserMasterId: application.iHeroUserMasterId,
+            isDeleted: false,
+          },
+          data: {
+            isVerified: true,
+            verificationStatus: HeroVerificationStatus.VERIFIED,
+          },
+        });
+      } else if (input.verificationStatus === HeroVerificationStatus.PENDING_HUB_VERIFICATION) {
+        await tx.mHeroProfiles.updateMany({
+          where: {
+            iUserMasterId: application.iHeroUserMasterId,
+            isDeleted: false,
+          },
+          data: {
+            isVerified: false,
+            verificationStatus: HeroVerificationStatus.PENDING_HUB_VERIFICATION,
+            isAvailable: false,
+          },
+        });
+      }
+
+      return application;
     });
   }
 

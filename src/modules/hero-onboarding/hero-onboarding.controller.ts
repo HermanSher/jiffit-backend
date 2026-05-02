@@ -33,6 +33,8 @@ const ONBOARDING_FIELDS = [
   "referralCode",
 ];
 
+const DRAFT_FIELDS = ["fullName", "mobileNumber", "selectedCity", "selectedJobRole"];
+
 function requireAuthUser(req: Request) {
   if (!req.authUser) {
     throw new ApiError(401, "Authentication required.");
@@ -118,6 +120,26 @@ export async function submitHeroOnboarding(req: Request, res: Response) {
 
     const result = await heroOnboardingService.submit(requireAuthUser(req), parsePayload(req.body));
     sendSuccess(res, 201, result.message, result);
+  } catch (error) {
+    handleControllerError(res, error);
+  }
+}
+
+export async function saveHeroOnboardingDraft(req: Request, res: Response) {
+  try {
+    validateRequestBodyFields(req.body, {
+      allowedFields: DRAFT_FIELDS,
+      requiredFields: ["fullName", "mobileNumber"],
+    });
+
+    const result = await heroOnboardingService.saveDraft(requireAuthUser(req), {
+      fullName: parseRequiredString(req.body.fullName, "fullName"),
+      mobileNumber: parseRequiredString(req.body.mobileNumber, "mobileNumber"),
+      selectedCity: parseOptionalString(req.body.selectedCity),
+      selectedJobRole: parseOptionalString(req.body.selectedJobRole),
+    });
+
+    sendSuccess(res, 200, result.message, result);
   } catch (error) {
     handleControllerError(res, error);
   }

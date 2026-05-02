@@ -87,6 +87,62 @@ export async function verifyHeroApplication(req: Request, res: Response) {
   }
 }
 
+function parseDashboardUpdateStatus(value: unknown): HeroVerificationStatus | undefined {
+  const status = parseStatus(value);
+  if (!status) {
+    return undefined;
+  }
+
+  if (status !== HeroVerificationStatus.PENDING_HUB_VERIFICATION && status !== HeroVerificationStatus.VERIFIED) {
+    throw new ApiError(400, "verificationStatus can only be PENDING_HUB_VERIFICATION or VERIFIED.");
+  }
+
+  return status;
+}
+
+export async function updateHeroVerification(req: Request, res: Response) {
+  try {
+    validateRequestBodyFields(req.body, {
+      allowedFields: [
+        "fullName",
+        "selectedCity",
+        "selectedJobRole",
+        "addressLine1",
+        "addressLine2",
+        "city",
+        "state",
+        "pincode",
+        "workType",
+        "vehicleType",
+        "earningsType",
+        "adminRemarks",
+        "verificationStatus",
+      ],
+    });
+
+    const data = await heroVerificationService.update(parseRequiredInt(req.params.id, "id"), {
+      fullName: parseOptionalString(req.body.fullName),
+      selectedCity: parseOptionalString(req.body.selectedCity),
+      selectedJobRole: parseOptionalString(req.body.selectedJobRole),
+      addressLine1: parseOptionalString(req.body.addressLine1),
+      addressLine2: parseOptionalString(req.body.addressLine2),
+      city: parseOptionalString(req.body.city),
+      state: parseOptionalString(req.body.state),
+      pincode: parseOptionalString(req.body.pincode),
+      workType: parseOptionalString(req.body.workType),
+      vehicleType: parseOptionalString(req.body.vehicleType),
+      earningsType: parseOptionalString(req.body.earningsType),
+      adminRemarks: parseOptionalString(req.body.adminRemarks),
+      verificationStatus: parseDashboardUpdateStatus(req.body.verificationStatus),
+      verifiedByUserMasterId: requireAuthUserId(req),
+    });
+
+    sendSuccess(res, 200, "Hero verification updated successfully.", data);
+  } catch (error) {
+    handleControllerError(res, error);
+  }
+}
+
 export async function rejectHeroApplication(req: Request, res: Response) {
   try {
     validateRequestBodyFields(req.body, {

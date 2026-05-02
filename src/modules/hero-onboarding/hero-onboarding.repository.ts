@@ -10,9 +10,9 @@ export type HeroOnboardingUpsertInput = {
   gender?: string | null;
   fatherName?: string | null;
   alternateMobileNumber?: string | null;
-  addressLine1: string;
+  addressLine1?: string | null;
   addressLine2?: string | null;
-  city: string;
+  city?: string | null;
   state?: string | null;
   pincode?: string | null;
   latitude?: Prisma.Decimal | null;
@@ -66,6 +66,60 @@ class HeroOnboardingRepository {
     return prisma.mHubs.findMany({
       where: { isActive: true },
       orderBy: [{ city: "asc" }, { sName: "asc" }],
+    });
+  }
+
+  upsertDraftApplication(input: Pick<
+    HeroOnboardingUpsertInput,
+    "iHeroUserMasterId" | "fullName" | "mobileNumber" | "selectedCity" | "selectedJobRole"
+  >) {
+    const data = {
+      fullName: input.fullName,
+      mobileNumber: input.mobileNumber,
+      selectedCity: input.selectedCity ?? null,
+      selectedJobRole: input.selectedJobRole ?? null,
+      verificationStatus: HeroVerificationStatus.DRAFT,
+      submittedAt: null,
+      verifiedAt: null,
+      verifiedByUserMasterId: null,
+      rejectionReason: null,
+    };
+
+    return prisma.$transaction(async (tx) => {
+      const application = await tx.tHeroOnboardingApplications.upsert({
+        where: { iHeroUserMasterId: input.iHeroUserMasterId },
+        create: {
+          iHeroUserMasterId: input.iHeroUserMasterId,
+          ...data,
+        },
+        update: data,
+        include: {
+          nearestHub: true,
+          verifiedBy: {
+            select: {
+              iMasterId: true,
+              username: true,
+              firstName: true,
+              middleName: true,
+              lastName: true,
+            },
+          },
+        },
+      });
+
+      await tx.mHeroProfiles.updateMany({
+        where: {
+          iUserMasterId: input.iHeroUserMasterId,
+          isDeleted: false,
+        },
+        data: {
+          isVerified: false,
+          verificationStatus: HeroVerificationStatus.DRAFT,
+          isAvailable: false,
+        },
+      });
+
+      return application;
     });
   }
 

@@ -15,9 +15,9 @@ export type HeroOnboardingInput = {
   gender?: string;
   fatherName?: string;
   alternateMobileNumber?: string;
-  addressLine1: string;
+  addressLine1?: string;
   addressLine2?: string;
-  city: string;
+  city?: string;
   state?: string;
   pincode?: string;
   latitude?: number;
@@ -194,6 +194,35 @@ class HeroOnboardingService {
 
   resubmit(user: AuthenticatedUser, input: HeroOnboardingInput) {
     return this.submit(user, input);
+  }
+
+  async saveDraft(
+    user: AuthenticatedUser,
+    input: Pick<HeroOnboardingInput, "fullName" | "mobileNumber" | "selectedCity" | "selectedJobRole">,
+  ) {
+    this.assertHeroUser(user);
+
+    const profile = await heroOnboardingRepository.getHeroProfileByUserId(user.iMasterId);
+    if (!profile || !profile.isActive) {
+      throw new ApiError(404, "Active hero profile not found.");
+    }
+
+    if (profile.verificationStatus === HeroVerificationStatus.VERIFIED) {
+      throw new ApiError(400, "Hero is already verified.");
+    }
+
+    const application = await heroOnboardingRepository.upsertDraftApplication({
+      iHeroUserMasterId: user.iMasterId,
+      fullName: input.fullName,
+      mobileNumber: input.mobileNumber,
+      selectedCity: input.selectedCity,
+      selectedJobRole: input.selectedJobRole,
+    });
+
+    return {
+      application: this.serializeApplication(application),
+      message: "Aapka profile draft me save ho gaya ✅",
+    };
   }
 }
 

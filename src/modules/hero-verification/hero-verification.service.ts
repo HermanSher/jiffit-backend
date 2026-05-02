@@ -1,6 +1,10 @@
 import { HeroVerificationStatus } from "@prisma/client";
 import { ApiError } from "../../utils/api-error";
-import { heroVerificationRepository, HeroVerificationFilters } from "./hero-verification.repository";
+import {
+  heroVerificationRepository,
+  HeroVerificationFilters,
+  HeroVerificationUpdateInput,
+} from "./hero-verification.repository";
 
 class HeroVerificationService {
   private serializeUserName(user: {
@@ -112,6 +116,20 @@ class HeroVerificationService {
     }
 
     const updated = await heroVerificationRepository.verifyApplication(id, verifiedByUserMasterId, adminRemarks);
+    return this.serializeApplication(updated);
+  }
+
+  async update(id: number, input: HeroVerificationUpdateInput) {
+    const application = await heroVerificationRepository.getApplicationById(id);
+    if (!application) {
+      throw new ApiError(404, "Hero verification application not found.");
+    }
+
+    if (application.verificationStatus === HeroVerificationStatus.VERIFIED && input.verificationStatus !== HeroVerificationStatus.VERIFIED) {
+      throw new ApiError(400, "Verified heroes cannot be moved back using this endpoint.");
+    }
+
+    const updated = await heroVerificationRepository.updateApplication(id, input);
     return this.serializeApplication(updated);
   }
 

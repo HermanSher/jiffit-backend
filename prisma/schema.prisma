@@ -582,9 +582,9 @@ model tHeroOnboardingApplications {
   gender                   String?
   fatherName               String?
   alternateMobileNumber    String?
-  addressLine1             String
+  addressLine1             String?
   addressLine2             String?
-  city                     String
+  city                     String?
   state                    String?
   pincode                  String?
   latitude                 Decimal?               @db.Decimal(10, 7)
