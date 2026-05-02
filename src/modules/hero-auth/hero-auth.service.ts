@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { authConfig } from "../../config/auth.config";
+import { heroOtpConfig } from "../../config/hero-otp.config";
 import { ApiError } from "../../utils/api-error";
 import { sha256, signAccessToken, signRefreshToken } from "../../utils/jwt";
 import { hashPassword } from "../../utils/password";
@@ -30,6 +31,20 @@ class HeroAuthService {
 
   private buildUsername(mobileNumber: string): string {
     return `hero_${mobileNumber.replace(/\D/g, "")}`;
+  }
+
+  private assertOtpAllowed(otp: string): void {
+    const trimmedOtp = otp.trim();
+
+    if (heroOtpConfig.mode === "mock") {
+      if (/^\d{6}$/.test(trimmedOtp) || trimmedOtp === heroOtpConfig.testOtp) {
+        return;
+      }
+
+      throw new ApiError(400, "Please enter a valid 6-digit OTP.");
+    }
+
+    throw new ApiError(501, "Real OTP provider is not configured yet.");
   }
 
   private buildFullName(user: {
@@ -82,18 +97,21 @@ class HeroAuthService {
   }
 
   requestOtp(mobileNumber: string) {
+    if (heroOtpConfig.mode !== "mock") {
+      throw new ApiError(501, "Real OTP provider is not configured yet.");
+    }
+
     return {
       mobileNumber,
-      otp: "123456",
-      expiresInSeconds: 300,
-      mock: true,
+      otp: heroOtpConfig.testOtp,
+      expiresInSeconds: heroOtpConfig.expiresInSeconds,
+      mode: heroOtpConfig.mode,
+      mock: heroOtpConfig.mode === "mock",
     };
   }
 
   async verifyOtp(input: VerifyOtpInput) {
-    if (!input.otp.trim()) {
-      throw new ApiError(400, "otp is required.");
-    }
+    this.assertOtpAllowed(input.otp);
 
     let user = await heroAuthRepository.findHeroUserByMobile(input.mobileNumber);
 

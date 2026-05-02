@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { handleControllerError, sendSuccess } from "../../utils/error-handler";
 import { parseOptionalString, parseRequiredString, validateRequestBodyFields } from "../../utils/request-parsers";
+import { parseIndianMobileNumber } from "../../utils/mobile";
 import { heroAuthService } from "./hero-auth.service";
 
 export async function requestHeroOtp(req: Request, res: Response) {
@@ -10,8 +11,9 @@ export async function requestHeroOtp(req: Request, res: Response) {
       requiredFields: ["mobileNumber"],
     });
 
-    const result = heroAuthService.requestOtp(parseRequiredString(req.body.mobileNumber, "mobileNumber"));
-    sendSuccess(res, 200, "Mock OTP generated successfully.", result);
+    const mobileNumber = parseIndianMobileNumber(parseRequiredString(req.body.mobileNumber, "mobileNumber"));
+    const result = heroAuthService.requestOtp(mobileNumber);
+    sendSuccess(res, 200, "OTP sent successfully.", result);
   } catch (error) {
     handleControllerError(res, error);
   }
@@ -25,7 +27,7 @@ export async function verifyHeroOtp(req: Request, res: Response) {
     });
 
     const result = await heroAuthService.verifyOtp({
-      mobileNumber: parseRequiredString(req.body.mobileNumber, "mobileNumber"),
+      mobileNumber: parseIndianMobileNumber(parseRequiredString(req.body.mobileNumber, "mobileNumber")),
       otp: parseRequiredString(req.body.otp, "otp"),
       deviceInfo: parseOptionalString(req.body.deviceInfo),
       ipAddress: req.ip,

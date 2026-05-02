@@ -1888,4 +1888,468 @@ for (const [path, tag, label] of architecturePaths) {
   },
 };
 
+(swaggerSpec as any).tags.push(
+  { name: "Hero Auth", description: "Hero mobile OTP authentication" },
+  { name: "Hero Onboarding", description: "Hero onboarding and verification status" },
+  { name: "Dashboard Hero Verifications", description: "Dashboard hero verification queue" },
+);
+
+(swaggerSpec as any).components.securitySchemes = {
+  bearerAuth: {
+    type: "http",
+    scheme: "bearer",
+    bearerFormat: "JWT",
+  },
+};
+
+Object.assign((swaggerSpec as any).components.schemas, {
+  ApiSuccess: {
+    type: "object",
+    properties: {
+      result: { type: "integer", example: 1 },
+      message: { type: "string", example: "Request completed successfully." },
+      data: { nullable: true },
+    },
+  },
+  HeroVerificationStatus: {
+    type: "string",
+    enum: ["DRAFT", "SUBMITTED", "PENDING_HUB_VERIFICATION", "VERIFIED", "REJECTED", "RESUBMISSION_REQUIRED"],
+    example: "DRAFT",
+  },
+  HeroOtpRequest: {
+    type: "object",
+    required: ["mobileNumber"],
+    properties: {
+      mobileNumber: {
+        type: "string",
+        description: "Indian mobile number. +91 and 91 prefixes are normalized to the canonical 10 digit number.",
+        example: "9876543210",
+      },
+    },
+  },
+  HeroOtpRequestData: {
+    type: "object",
+    properties: {
+      mobileNumber: { type: "string", example: "9876543210" },
+      otp: { type: "string", example: "123456", description: "Returned only in mock mode." },
+      expiresInSeconds: { type: "integer", example: 300 },
+      mode: { type: "string", example: "mock" },
+      mock: { type: "boolean", example: true },
+    },
+  },
+  HeroOtpVerifyRequest: {
+    type: "object",
+    required: ["mobileNumber", "otp"],
+    properties: {
+      mobileNumber: { type: "string", example: "9876543210" },
+      otp: { type: "string", example: "123456" },
+      deviceInfo: { type: "string", example: "flutter-hero-app" },
+    },
+  },
+  HeroUser: {
+    type: "object",
+    properties: {
+      id: { type: "integer", example: 42 },
+      username: { type: "string", example: "hero_9876543210" },
+      mobileNumber: { type: "string", example: "9876543210" },
+      fullName: { type: "string", example: "Amit Kumar" },
+      role: { type: "string", example: "Hero" },
+      roleCode: { type: "string", example: "HERO" },
+      userType: { type: "string", example: "Hero" },
+      userTypeCode: { type: "string", example: "HERO" },
+      isVerified: { type: "boolean", example: false },
+      verificationStatus: { $ref: "#/components/schemas/HeroVerificationStatus" },
+    },
+  },
+  HeroHub: {
+    type: "object",
+    nullable: true,
+    properties: {
+      id: { type: "integer", example: 1 },
+      name: { type: "string", example: "Jiffit Patna Hub" },
+      addressLine1: { type: "string", nullable: true, example: "Boring Road" },
+      city: { type: "string", nullable: true, example: "Patna" },
+      latitude: { type: "number", example: 25.5941 },
+      longitude: { type: "number", example: 85.1376 },
+      contactNumber: { type: "string", nullable: true, example: "9876543210" },
+      distanceKm: { type: "number", nullable: true, example: 2.4 },
+    },
+  },
+  HeroOnboardingApplication: {
+    type: "object",
+    properties: {
+      id: { type: "integer", example: 12 },
+      heroUserId: { type: "integer", example: 42 },
+      fullName: { type: "string", example: "Amit Kumar" },
+      mobileNumber: { type: "string", example: "9876543210" },
+      email: { type: "string", nullable: true, example: "amit@example.com" },
+      addressLine1: { type: "string", nullable: true, example: "House 12" },
+      addressLine2: { type: "string", nullable: true },
+      city: { type: "string", nullable: true, example: "Patna" },
+      state: { type: "string", nullable: true, example: "Bihar" },
+      pincode: { type: "string", nullable: true, example: "800001" },
+      selectedCity: { type: "string", nullable: true, example: "Patna" },
+      selectedJobRole: { type: "string", nullable: true, example: "Service Hero" },
+      workType: { type: "string", nullable: true, example: "FIELD_WORK" },
+      vehicleType: { type: "string", nullable: true, example: "TWO_WHEELER" },
+      earningsType: { type: "string", nullable: true, example: "PER_JOB" },
+      verificationStatus: { $ref: "#/components/schemas/HeroVerificationStatus" },
+      nearestHub: { $ref: "#/components/schemas/HeroHub" },
+      submittedAt: { type: "string", nullable: true, format: "date-time" },
+      verifiedAt: { type: "string", nullable: true, format: "date-time" },
+      rejectionReason: { type: "string", nullable: true },
+      adminRemarks: { type: "string", nullable: true },
+    },
+  },
+  HeroOnboardingStatus: {
+    type: "object",
+    properties: {
+      heroUserId: { type: "integer", example: 42 },
+      displayName: { type: "string", example: "Amit Kumar" },
+      verificationStatus: { $ref: "#/components/schemas/HeroVerificationStatus" },
+      isVerified: { type: "boolean", example: false },
+      canGoOnline: { type: "boolean", example: false },
+      application: { $ref: "#/components/schemas/HeroOnboardingApplication" },
+      nearestHub: { $ref: "#/components/schemas/HeroHub" },
+    },
+  },
+  HeroOtpVerifyData: {
+    type: "object",
+    properties: {
+      accessToken: { type: "string", example: "eyJhbGciOi..." },
+      refreshToken: { type: "string", example: "eyJhbGciOi..." },
+      user: { $ref: "#/components/schemas/HeroUser" },
+      onboarding: { $ref: "#/components/schemas/HeroOnboardingStatus" },
+    },
+  },
+  HeroOnboardingDraftRequest: {
+    type: "object",
+    required: ["fullName", "mobileNumber"],
+    properties: {
+      fullName: { type: "string", example: "Amit Kumar" },
+      mobileNumber: { type: "string", example: "9876543210" },
+      selectedCity: { type: "string", example: "Patna" },
+      selectedJobRole: { type: "string", example: "Service Hero" },
+    },
+  },
+  HeroOnboardingSubmitRequest: {
+    type: "object",
+    required: ["fullName", "mobileNumber", "addressLine1", "city"],
+    properties: {
+      fullName: { type: "string", example: "Amit Kumar" },
+      mobileNumber: { type: "string", example: "9876543210" },
+      addressLine1: { type: "string", example: "House 12, Boring Road" },
+      city: { type: "string", example: "Patna" },
+      selectedCity: { type: "string", example: "Patna" },
+      selectedJobRole: { type: "string", example: "Service Hero" },
+      workType: { type: "string", example: "FIELD_WORK" },
+      vehicleType: { type: "string", example: "TWO_WHEELER" },
+      earningsType: { type: "string", example: "PER_JOB" },
+      onboardingSource: { type: "string", example: "HERO_APP" },
+    },
+  },
+  DashboardHeroVerification: {
+    allOf: [
+      { $ref: "#/components/schemas/HeroOnboardingApplication" },
+      {
+        type: "object",
+        properties: {
+          heroCode: { type: "string", nullable: true, example: "HERO-42" },
+          username: { type: "string", example: "hero_9876543210" },
+          isVerified: { type: "boolean", example: false },
+          workerState: { type: "string", nullable: true, example: "OFFLINE" },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+    ],
+  },
+  DashboardHeroVerificationUpdateRequest: {
+    type: "object",
+    properties: {
+      fullName: { type: "string", example: "Amit Kumar" },
+      selectedCity: { type: "string", example: "Patna" },
+      selectedJobRole: { type: "string", example: "Service Hero" },
+      addressLine1: { type: "string", example: "House 12" },
+      addressLine2: { type: "string", example: "Near Metro" },
+      city: { type: "string", example: "Patna" },
+      state: { type: "string", example: "Bihar" },
+      pincode: { type: "string", example: "800001" },
+      workType: { type: "string", example: "FIELD_WORK" },
+      vehicleType: { type: "string", example: "TWO_WHEELER" },
+      earningsType: { type: "string", example: "PER_JOB" },
+      adminRemarks: { type: "string", example: "Telecaller updated draft lead." },
+      verificationStatus: {
+        type: "string",
+        enum: ["PENDING_HUB_VERIFICATION", "VERIFIED"],
+        example: "PENDING_HUB_VERIFICATION",
+      },
+    },
+  },
+});
+
+(swaggerSpec as any).paths["/api/hero-auth/request-otp"] = {
+  post: {
+    tags: ["Hero Auth"],
+    summary: "Request hero OTP",
+    description: "In mock mode, accepts any valid Indian mobile number and returns the configured test OTP.",
+    requestBody: {
+      required: true,
+      content: { "application/json": { schema: { $ref: "#/components/schemas/HeroOtpRequest" } } },
+    },
+    responses: {
+      "200": {
+        description: "OTP sent",
+        content: {
+          "application/json": {
+            schema: {
+              allOf: [
+                { $ref: "#/components/schemas/ApiSuccess" },
+                { type: "object", properties: { data: { $ref: "#/components/schemas/HeroOtpRequestData" } } },
+              ],
+            },
+          },
+        },
+      },
+      "400": { description: "Invalid mobile number", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+    },
+  },
+};
+
+(swaggerSpec as any).paths["/api/hero-auth/verify-otp"] = {
+  post: {
+    tags: ["Hero Auth"],
+    summary: "Verify hero OTP and create session",
+    description: "In mock mode, accepts any six digit OTP or the configured test OTP.",
+    requestBody: {
+      required: true,
+      content: { "application/json": { schema: { $ref: "#/components/schemas/HeroOtpVerifyRequest" } } },
+    },
+    responses: {
+      "200": {
+        description: "Hero logged in",
+        content: {
+          "application/json": {
+            schema: {
+              allOf: [
+                { $ref: "#/components/schemas/ApiSuccess" },
+                { type: "object", properties: { data: { $ref: "#/components/schemas/HeroOtpVerifyData" } } },
+              ],
+            },
+          },
+        },
+      },
+      "400": { description: "Invalid mobile number or OTP", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+    },
+  },
+};
+
+(swaggerSpec as any).paths["/api/hero-onboarding/status"] = {
+  get: {
+    tags: ["Hero Onboarding"],
+    summary: "Get logged-in hero onboarding status",
+    security: [{ bearerAuth: [] }],
+    responses: {
+      "200": {
+        description: "Hero onboarding status",
+        content: {
+          "application/json": {
+            schema: {
+              allOf: [
+                { $ref: "#/components/schemas/ApiSuccess" },
+                { type: "object", properties: { data: { $ref: "#/components/schemas/HeroOnboardingStatus" } } },
+              ],
+            },
+          },
+        },
+      },
+      "401": { description: "Authentication required", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+    },
+  },
+};
+
+(swaggerSpec as any).paths["/api/hero-onboarding/application"] = {
+  get: {
+    tags: ["Hero Onboarding"],
+    summary: "Get logged-in hero onboarding application",
+    security: [{ bearerAuth: [] }],
+    responses: {
+      "200": { description: "Hero onboarding application", content: { "application/json": { schema: { type: "object" } } } },
+      "404": { description: "Application not found", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+    },
+  },
+};
+
+(swaggerSpec as any).paths["/api/hero-onboarding/draft"] = {
+  post: {
+    tags: ["Hero Onboarding"],
+    summary: "Create or update draft hero lead",
+    security: [{ bearerAuth: [] }],
+    requestBody: {
+      required: true,
+      content: { "application/json": { schema: { $ref: "#/components/schemas/HeroOnboardingDraftRequest" } } },
+    },
+    responses: {
+      "200": { description: "Draft saved", content: { "application/json": { schema: { type: "object" } } } },
+      "400": { description: "Invalid draft payload", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+    },
+  },
+};
+
+(swaggerSpec as any).paths["/api/hero-onboarding/submit"] = {
+  post: {
+    tags: ["Hero Onboarding"],
+    summary: "Submit full onboarding for hub verification",
+    security: [{ bearerAuth: [] }],
+    requestBody: {
+      required: true,
+      content: { "application/json": { schema: { $ref: "#/components/schemas/HeroOnboardingSubmitRequest" } } },
+    },
+    responses: {
+      "201": { description: "Onboarding submitted", content: { "application/json": { schema: { type: "object" } } } },
+      "400": { description: "Invalid onboarding payload", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+    },
+  },
+};
+
+(swaggerSpec as any).paths["/api/hero-onboarding/resubmit"] = {
+  patch: {
+    tags: ["Hero Onboarding"],
+    summary: "Resubmit onboarding after rejection or correction request",
+    security: [{ bearerAuth: [] }],
+    requestBody: {
+      required: true,
+      content: { "application/json": { schema: { $ref: "#/components/schemas/HeroOnboardingSubmitRequest" } } },
+    },
+    responses: {
+      "200": { description: "Onboarding resubmitted", content: { "application/json": { schema: { type: "object" } } } },
+    },
+  },
+};
+
+(swaggerSpec as any).paths["/api/dashboard/hero-verifications"] = {
+  get: {
+    tags: ["Dashboard Hero Verifications"],
+    summary: "List hero verification applications including draft leads",
+    security: [{ bearerAuth: [] }],
+    parameters: [
+      { in: "query", name: "status", schema: { $ref: "#/components/schemas/HeroVerificationStatus" }, description: "Filter by status, including DRAFT." },
+      { in: "query", name: "city", schema: { type: "string" } },
+      { in: "query", name: "search", schema: { type: "string" } },
+      { in: "query", name: "limit", schema: { type: "integer", default: 100, maximum: 500 } },
+    ],
+    responses: {
+      "200": {
+        description: "Hero verification applications",
+        content: {
+          "application/json": {
+            schema: {
+              allOf: [
+                { $ref: "#/components/schemas/ApiSuccess" },
+                {
+                  type: "object",
+                  properties: {
+                    data: {
+                      type: "array",
+                      items: { $ref: "#/components/schemas/DashboardHeroVerification" },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+    },
+  },
+};
+
+(swaggerSpec as any).paths["/api/dashboard/hero-verifications/{id}"] = {
+  get: {
+    tags: ["Dashboard Hero Verifications"],
+    summary: "Open a hero verification application",
+    security: [{ bearerAuth: [] }],
+    parameters: [{ in: "path", name: "id", required: true, schema: { type: "integer" } }],
+    responses: {
+      "200": { description: "Hero verification application", content: { "application/json": { schema: { type: "object" } } } },
+      "404": { description: "Application not found", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+    },
+  },
+  patch: {
+    tags: ["Dashboard Hero Verifications"],
+    summary: "Update hero draft/application fields or move status",
+    description: "Requires HERO_VERIFICATION_UPDATE or HERO_VERIFICATION_VERIFY.",
+    security: [{ bearerAuth: [] }],
+    parameters: [{ in: "path", name: "id", required: true, schema: { type: "integer" } }],
+    requestBody: {
+      required: true,
+      content: { "application/json": { schema: { $ref: "#/components/schemas/DashboardHeroVerificationUpdateRequest" } } },
+    },
+    responses: {
+      "200": { description: "Hero verification updated", content: { "application/json": { schema: { type: "object" } } } },
+    },
+  },
+};
+
+(swaggerSpec as any).paths["/api/dashboard/hero-verifications/{id}/verify"] = {
+  post: {
+    tags: ["Dashboard Hero Verifications"],
+    summary: "Verify hero and unlock worker app access",
+    security: [{ bearerAuth: [] }],
+    parameters: [{ in: "path", name: "id", required: true, schema: { type: "integer" } }],
+    requestBody: {
+      required: false,
+      content: { "application/json": { schema: { type: "object", properties: { adminRemarks: { type: "string" } } } } },
+    },
+    responses: { "200": { description: "Hero verified" } },
+  },
+};
+
+(swaggerSpec as any).paths["/api/dashboard/hero-verifications/{id}/reject"] = {
+  post: {
+    tags: ["Dashboard Hero Verifications"],
+    summary: "Reject hero verification",
+    security: [{ bearerAuth: [] }],
+    parameters: [{ in: "path", name: "id", required: true, schema: { type: "integer" } }],
+    requestBody: {
+      required: true,
+      content: {
+        "application/json": {
+          schema: {
+            type: "object",
+            required: ["rejectionReason"],
+            properties: {
+              rejectionReason: { type: "string", example: "Documents could not be verified." },
+              adminRemarks: { type: "string" },
+            },
+          },
+        },
+      },
+    },
+    responses: { "200": { description: "Hero rejected" } },
+  },
+};
+
+(swaggerSpec as any).paths["/api/dashboard/hero-verifications/{id}/resubmission-required"] = {
+  post: {
+    tags: ["Dashboard Hero Verifications"],
+    summary: "Request hero onboarding resubmission",
+    security: [{ bearerAuth: [] }],
+    parameters: [{ in: "path", name: "id", required: true, schema: { type: "integer" } }],
+    requestBody: {
+      required: true,
+      content: {
+        "application/json": {
+          schema: {
+            type: "object",
+            required: ["adminRemarks"],
+            properties: { adminRemarks: { type: "string", example: "Please update address proof." } },
+          },
+        },
+      },
+    },
+    responses: { "200": { description: "Resubmission requested" } },
+  },
+};
+
 export default swaggerSpec;

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { ApiError } from "../../utils/api-error";
 import { handleControllerError, sendSuccess } from "../../utils/error-handler";
+import { parseIndianMobileNumber } from "../../utils/mobile";
 import {
   parseOptionalDate,
   parseOptionalString,
@@ -70,7 +71,7 @@ function parsePayload(body: Record<string, unknown>): HeroOnboardingInput {
 
   return {
     fullName: parseRequiredString(body.fullName, "fullName"),
-    mobileNumber: parseRequiredString(body.mobileNumber, "mobileNumber"),
+    mobileNumber: parseIndianMobileNumber(parseRequiredString(body.mobileNumber, "mobileNumber")),
     email: parseOptionalString(body.email),
     dateOfBirth: parseOptionalDate(body.dateOfBirth, "dateOfBirth"),
     gender: parseOptionalString(body.gender),
@@ -134,7 +135,7 @@ export async function saveHeroOnboardingDraft(req: Request, res: Response) {
 
     const result = await heroOnboardingService.saveDraft(requireAuthUser(req), {
       fullName: parseRequiredString(req.body.fullName, "fullName"),
-      mobileNumber: parseRequiredString(req.body.mobileNumber, "mobileNumber"),
+      mobileNumber: parseIndianMobileNumber(parseRequiredString(req.body.mobileNumber, "mobileNumber")),
       selectedCity: parseOptionalString(req.body.selectedCity),
       selectedJobRole: parseOptionalString(req.body.selectedJobRole),
     });
